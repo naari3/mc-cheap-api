@@ -1,7 +1,17 @@
-import { Table, Column, Model, PrimaryKey, IsUUID, Default, AllowNull, DataType, Unique } from 'sequelize-typescript';
-import * as uuid from "uuid/v4"
+import {
+  Table,
+  Column,
+  Model,
+  PrimaryKey,
+  IsUUID,
+  Default,
+  AllowNull,
+  DataType,
+  Unique
+} from "sequelize-typescript";
+import * as uuid from "uuid/v4";
 
-@Table({timestamps: true})
+@Table({ timestamps: true })
 export class User extends Model<User> {
   @AllowNull(false)
   @IsUUID(4)
