@@ -2,10 +2,18 @@ import { send } from "micro";
 import { router, get, post } from "microrouter";
 import * as microAuthTwitter from "microauth-twitter";
 
+import { Sequelize } from "sequelize-typescript";
+import { User } from "./models/user";
+
 import * as AWS from "aws-sdk";
 
 const accessKeyId = process.env.AWS_ACCESS_KEY_ID
 const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
+
+const sequelize = new Sequelize(process.env.POSTGRES_URL);
+sequelize.addModels([User]);
+sequelize.sync({ force: true });
+sequelize.sync({});
 
 const options = {
     consumerKey: process.env.TWITTER_CONSUMER_KEY,
@@ -54,7 +62,6 @@ const describeAutoScalingGroup = async (
 export = twitterAuth(async (req, res, auth) => {
     const routes = router(
         get("/", async (_, res) => {
-            console.log(auth);
             await send(res, 200, { message: "Hello World" });
         }),
 
@@ -79,7 +86,6 @@ export = twitterAuth(async (req, res, auth) => {
                 AutoScalingGroupName,
                 DesiredCapacity
             })
-            console.log(result);
             await send(res, 200, { message: "ok", result });
         }),
 
@@ -99,7 +105,13 @@ export = twitterAuth(async (req, res, auth) => {
         }),
 
         get("/auth/twitter/callback", async (req, res) => {
-            console.log(auth);
+            console.log(auth.result);
+            auth.result.info.name
+            auth.result.info.screen_name
+            auth.result.info.id
+            auth.result.accessToken;
+            auth.result.accessTokenSecret;
+            const [name, twitterScreenName, twitterUserId, twitterAccessToken, twitterAccessTokenSecret, allowed] = [auth.result.info.name, auth.result.info.screen_name, auth.result.info.id, auth.result.accessToken, auth.result.accessTokenSecret, false]
             await send(res, 200, { message: "ok", auth });
         })
     );
