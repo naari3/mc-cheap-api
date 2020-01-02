@@ -110,13 +110,11 @@ export = twitterAuth(async (req, res, auth) => {
       await send(res, 200, { message: "ok", status, result });
     }),
 
-    get("/auth/twitter/callback", async (req, res) => {
-      console.log(auth.result);
-      auth.result.info.name;
-      auth.result.info.screen_name;
-      auth.result.info.id;
-      auth.result.accessToken;
-      auth.result.accessTokenSecret;
+    get("/auth/twitter/callback", async (_, res) => {
+      if (auth.err) {
+        await send(res, 500, { message: "err" });
+        return;
+      }
       const [
         name,
         twitterScreenName,
@@ -132,15 +130,25 @@ export = twitterAuth(async (req, res, auth) => {
         auth.result.accessTokenSecret,
         false
       ];
-      console.log(
-        name,
-        twitterScreenName,
-        twitterUserId,
-        twitterAccessToken,
-        twitterAccessTokenSecret,
-        allowed
-      );
-      await send(res, 200, { message: "ok", auth });
+      let u = await User.findOne({ where: { twitterUserId } });
+      if (u) {
+        u.update({
+          name,
+          twitterScreenName,
+          twitterAccessToken,
+          twitterAccessTokenSecret
+        });
+      } else {
+        u = await User.create({
+          name,
+          twitterScreenName,
+          twitterUserId,
+          twitterAccessToken,
+          twitterAccessTokenSecret,
+          allowed
+        });
+      }
+      await send(res, 201, { user: u.toJSON() });
     })
   );
   routes(req, res);

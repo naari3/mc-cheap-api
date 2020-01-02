@@ -30,7 +30,7 @@ export class User extends Model<User> {
 
   @AllowNull(false)
   @Unique
-  @Column
+  @Column(DataType.BIGINT)
   twitterUserId: number;
 
   @Column
@@ -44,4 +44,19 @@ export class User extends Model<User> {
 
   @Column
   mcUsername: string;
+
+  /**
+   * toJSON
+   */
+  public toJSON(): object {
+    const [id, name, twitterScreenName, twitterUserId, allowed, mcUsername] = [
+      this.id,
+      this.name,
+      this.twitterScreenName,
+      this.twitterUserId,
+      this.allowed,
+      this.mcUsername
+    ];
+    return { id, name, twitterScreenName, twitterUserId, allowed, mcUsername };
+  }
 }
