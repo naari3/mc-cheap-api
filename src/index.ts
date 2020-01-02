@@ -3,7 +3,7 @@ import { router, get, post, options } from "microrouter";
 import * as microAuthTwitter from "microauth-twitter";
 import * as Cors from "micro-cors";
 
-const cors = Cors({ origin: "http://localhost:3001", maxAge: 60 * 10 });
+const cors = Cors({ origin: `${process.env.WEB_HOST}`, maxAge: 60 * 10 });
 
 import { Sequelize } from "sequelize-typescript";
 import { User } from "./models/user";
@@ -27,7 +27,7 @@ sequelize.sync({});
 const twitterAuth = microAuthTwitter({
   consumerKey: process.env.TWITTER_CONSUMER_KEY,
   consumerSecret: process.env.TWITTER_CONSUMER_SECRET_KEY,
-  callbackUrl: "http://localhost:3000/auth/twitter/callback",
+  callbackUrl: `${process.env.RUNNING_URL}/auth/twitter/callback`,
   path: "/auth/twitter"
 });
 
@@ -168,7 +168,7 @@ const handler = cookieParse(async function(req, res) {
           path: "/"
         });
         res.setHeader("Set-Cookie", setCookie);
-        res.setHeader("Location", "/");
+        res.setHeader("Location", process.env.WEB_HOST);
         res.statusCode = 302;
         res.end();
       }),
