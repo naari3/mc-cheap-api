@@ -11,6 +11,11 @@ import {
 } from "sequelize-typescript";
 import * as uuid from "uuid/v4";
 
+import { UserAllowed } from "../services/userAllowed";
+
+import * as pg from "pg";
+pg.defaults.parseInt8 = true;
+
 @Table({ timestamps: true })
 export class User extends Model<User> {
   @AllowNull(false)
@@ -44,6 +49,48 @@ export class User extends Model<User> {
 
   @Column
   mcUsername: string;
+
+  /**
+   * findOrCreateByAuth
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static async findOrCreateByAuth(auth: any): Promise<User> {
+    const [
+      name,
+      twitterScreenName,
+      twitterUserId,
+      twitterAccessToken,
+      twitterAccessTokenSecret
+    ] = [
+      auth.result.info.name,
+      auth.result.info.screen_name,
+      auth.result.info.id,
+      auth.result.accessToken,
+      auth.result.accessTokenSecret
+    ];
+    let u = await User.findOne({ where: { twitterUserId } });
+    const allowed = await new UserAllowed(u).allowed();
+    console.log({ allowed });
+    if (u) {
+      u.update({
+        name,
+        twitterScreenName,
+        twitterAccessToken,
+        twitterAccessTokenSecret,
+        allowed
+      });
+    } else {
+      u = await User.create({
+        name,
+        twitterScreenName,
+        twitterUserId,
+        twitterAccessToken,
+        twitterAccessTokenSecret,
+        allowed
+      });
+    }
+    return u;
+  }
 
   /**
    * toJSON

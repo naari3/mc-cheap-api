@@ -5,14 +5,20 @@ import * as microAuthTwitter from "microauth-twitter";
 import { Sequelize } from "sequelize-typescript";
 import { User } from "./models/user";
 
+import * as jwt from "jsonwebtoken";
+import * as cookie from "cookie";
+
+import * as cookieParse from "micro-cookie";
+
 import * as AWS from "aws-sdk";
+
+const HOSTNAME = process.env.HOSTNAME;
 
 const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
 const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
 
 const sequelize = new Sequelize(process.env.POSTGRES_URL);
 sequelize.addModels([User]);
-sequelize.sync({ force: true });
 sequelize.sync({});
 
 const options = {
@@ -22,6 +28,8 @@ const options = {
   path: "/auth/twitter"
 };
 const twitterAuth = microAuthTwitter(options);
+
+const jwtSecret = process.env.JWT_SECRET;
 
 const region = process.env.AWS_REGION;
 const AutoScalingGroupName = process.env.AWS_AUTO_SCALING_GROUP_NAME;
@@ -59,97 +67,90 @@ const describeAutoScalingGroup = async (
   });
 };
 
-export = twitterAuth(async (req, res, auth) => {
-  const routes = router(
-    get("/", async (_, res) => {
-      await send(res, 200, { message: "Hello World" });
-    }),
+const currentUser = async (token: string): Promise<User> => {
+  const { id } = jwt.verify(token, jwtSecret) as { id: string };
+  return User.findByPk(id);
+};
 
-    get("/instance_status", async (_, res) => {
-      const AutoScalingGroupNames = [AutoScalingGroupName];
-      const result = await describeAutoScalingGroup(autoscaling, {
-        AutoScalingGroupNames
-      });
-      const group = result.AutoScalingGroups.find(
-        g => g.AutoScalingGroupName === AutoScalingGroupName
-      );
-      const instance = group.Instances.find(i => i);
+const currentUserAllowed = async (token: string): Promise<boolean> => {
+  const user = await currentUser(token);
+  return !!user && user.allowed;
+};
 
-      let status /* "Pending" | "InService" | "Terminating" | "Terminated" */ =
-        "Terminated";
-      if (instance) {
-        status = instance.LifecycleState;
-      }
-      await send(res, 200, { message: "ok", status, result });
-    }),
+export = cookieParse(async function(req, res) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const token = (req as any).cookies.token;
 
-    post("/boot", async (_, res) => {
-      const DesiredCapacity = 1;
-      const result = await updateAutoScalingGroup(autoscaling, {
-        AutoScalingGroupName,
-        DesiredCapacity
-      });
-      await send(res, 200, { message: "ok", result });
-    }),
+  twitterAuth(async (req, res, auth) => {
+    const routes = router(
+      get("/", async (req, res) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await send(res, 200, { message: "Hello World" });
+      }),
 
-    get("/instance_status", async (_, res) => {
-      const AutoScalingGroupNames = [AutoScalingGroupName];
-      const result = await describeAutoScalingGroup(autoscaling, {
-        AutoScalingGroupNames
-      });
-      const group = result.AutoScalingGroups.find(
-        g => g.AutoScalingGroupName === AutoScalingGroupName
-      );
-      const instance = group.Instances.find(i => i);
+      get("/user", async (req, res) => {
+        await send(res, 200, { message: "ok", user: await currentUser(token) });
+      }),
 
-      let status /* "Pending" | "InService" | "Terminating" | "Terminated" */ =
-        "Terminated";
-      if (instance) {
-        status = instance.LifecycleState;
-      }
-      await send(res, 200, { message: "ok", status, result });
-    }),
+      get("/instance_status", async (_, res) => {
+        if (!(await currentUserAllowed(token))) {
+          await send(res, 401, { message: "Unauthorized" });
+          return;
+        }
 
-    get("/auth/twitter/callback", async (_, res) => {
-      if (auth.err) {
-        await send(res, 500, { message: "err" });
-        return;
-      }
-      const [
-        name,
-        twitterScreenName,
-        twitterUserId,
-        twitterAccessToken,
-        twitterAccessTokenSecret,
-        allowed
-      ] = [
-        auth.result.info.name,
-        auth.result.info.screen_name,
-        auth.result.info.id,
-        auth.result.accessToken,
-        auth.result.accessTokenSecret,
-        false
-      ];
-      let u = await User.findOne({ where: { twitterUserId } });
-      if (u) {
-        u.update({
-          name,
-          twitterScreenName,
-          twitterAccessToken,
-          twitterAccessTokenSecret
+        const AutoScalingGroupNames = [AutoScalingGroupName];
+        const result = await describeAutoScalingGroup(autoscaling, {
+          AutoScalingGroupNames
         });
-      } else {
-        u = await User.create({
-          name,
-          twitterScreenName,
-          twitterUserId,
-          twitterAccessToken,
-          twitterAccessTokenSecret,
-          allowed
+        const group = result.AutoScalingGroups.find(
+          g => g.AutoScalingGroupName === AutoScalingGroupName
+        );
+        const instance = group.Instances.find(i => i);
+
+        let status /* "Pending" | "InService" | "Terminating" | "Terminated" */ =
+          "Terminated";
+        if (instance) {
+          status = instance.LifecycleState;
+        }
+        await send(res, 200, { message: "ok", status, result });
+      }),
+
+      post("/boot", async (_, res) => {
+        if (!(await currentUserAllowed(token))) {
+          await send(res, 401, { message: "Unauthorized" });
+          return;
+        }
+        78;
+        const DesiredCapacity = 1;
+        const result = await updateAutoScalingGroup(autoscaling, {
+          AutoScalingGroupName,
+          DesiredCapacity
         });
-      }
-      await send(res, 201, { user: u.toJSON() });
-    })
-  );
-  routes(req, res);
+        await send(res, 200, { message: "ok", result });
+      }),
+
+      get("/auth/twitter/callback", async (_, res) => {
+        if (auth.err) {
+          await send(res, 500, { message: "err" });
+          return;
+        }
+        const u = await User.findOrCreateByAuth(auth);
+        const token = jwt.sign({ id: u.id }, jwtSecret, {
+          algorithm: "HS256",
+          expiresIn: 60 * 60 * 24 * 30
+        });
+        const setCookie = cookie.serialize("token", token, {
+          domain: HOSTNAME,
+          httpOnly: true,
+          maxAge: 60 * 60 * 24 * 30,
+          path: "/"
+        });
+        res.setHeader("Set-Cookie", setCookie);
+        res.setHeader("Location", "/");
+        res.statusCode = 302;
+        res.end();
+      })
+    );
+    routes(req, res);
+  })(req, res);
 });
