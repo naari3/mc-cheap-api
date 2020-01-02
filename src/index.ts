@@ -1,6 +1,9 @@
-import { send } from "micro";
-import { router, get, post } from "microrouter";
+import { send, json } from "micro";
+import { router, get, post, options } from "microrouter";
 import * as microAuthTwitter from "microauth-twitter";
+import * as Cors from "micro-cors";
+
+const cors = Cors({ origin: "http://localhost:3001", maxAge: 60 * 10 });
 
 import { Sequelize } from "sequelize-typescript";
 import { User } from "./models/user";
@@ -21,13 +24,12 @@ const sequelize = new Sequelize(process.env.POSTGRES_URL);
 sequelize.addModels([User]);
 sequelize.sync({});
 
-const options = {
+const twitterAuth = microAuthTwitter({
   consumerKey: process.env.TWITTER_CONSUMER_KEY,
   consumerSecret: process.env.TWITTER_CONSUMER_SECRET_KEY,
   callbackUrl: "http://localhost:3000/auth/twitter/callback",
   path: "/auth/twitter"
-};
-const twitterAuth = microAuthTwitter(options);
+});
 
 const jwtSecret = process.env.JWT_SECRET;
 
@@ -68,8 +70,12 @@ const describeAutoScalingGroup = async (
 };
 
 const currentUser = async (token: string): Promise<User> => {
-  const { id } = jwt.verify(token, jwtSecret) as { id: string };
-  return User.findByPk(id);
+  try {
+    const { id } = jwt.verify(token, jwtSecret) as { id: string };
+    return User.findByPk(id);
+  } catch (error) {
+    return null;
+  }
 };
 
 const currentUserAllowed = async (token: string): Promise<boolean> => {
@@ -77,9 +83,10 @@ const currentUserAllowed = async (token: string): Promise<boolean> => {
   return !!user && user.allowed;
 };
 
-export = cookieParse(async function(req, res) {
+const handler = cookieParse(async function(req, res) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (req as any).cookies.token;
+  // const token = ((req as any).cookies || {}).token || "";
+  const token = (req.headers.authorization || "").replace("Bearer ", "");
 
   twitterAuth(async (req, res, auth) => {
     const routes = router(
@@ -88,8 +95,23 @@ export = cookieParse(async function(req, res) {
         await send(res, 200, { message: "Hello World" });
       }),
 
+      get("/token", async (req, res) => {
+        const token = ((req as any).cookies || {}).token || "";
+        const user = await currentUser(token);
+        if (user) {
+          await send(res, 200, { message: "ok", token });
+        } else {
+          await send(res, 404, { message: "not found" });
+        }
+      }),
+
       get("/user", async (req, res) => {
-        await send(res, 200, { message: "ok", user: await currentUser(token) });
+        const user = await currentUser(token);
+        if (user) {
+          await send(res, 200, { message: "ok", user });
+        } else {
+          await send(res, 404, { message: "not found" });
+        }
       }),
 
       get("/instance_status", async (_, res) => {
@@ -149,8 +171,16 @@ export = cookieParse(async function(req, res) {
         res.setHeader("Location", "/");
         res.statusCode = 302;
         res.end();
+      }),
+      get("/*", async (_, res) => {
+        await send(res, 404, { message: "not found" });
+      }),
+      options("/*", async (req, res) => {
+        res.end();
       })
     );
     routes(req, res);
   })(req, res);
 });
+
+export = cors(handler);
