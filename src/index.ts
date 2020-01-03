@@ -1,5 +1,5 @@
 import { send, json } from "micro";
-import { router, get, post, options } from "microrouter";
+import { router, get, post, put, options } from "microrouter";
 import * as microAuthTwitter from "microauth-twitter";
 import * as Cors from "micro-cors";
 
@@ -112,6 +112,28 @@ const handler = cookieParse(async function(req, res) {
         } else {
           await send(res, 404, { message: "not found" });
         }
+      }),
+
+      put("/user", async (req, res) => {
+        const user = await currentUser(token);
+        if (!user) {
+          await send(res, 404, { message: "not found" });
+          return;
+        }
+
+        const params = (await json(req)) as { mcUsername: string };
+        if (params.mcUsername) {
+          const pattern = /^[a-zA-Z0-9_]{3,16}$/;
+          if (!params.mcUsername.match(pattern)) {
+            await send(res, 400, { message: "invalid pattern" });
+            return;
+          }
+        }
+
+        if (params.mcUsername && user.mcUsername !== params.mcUsername) {
+          user.update({ mcUsername: params.mcUsername });
+        }
+        await send(res, 200, { message: "ok", user });
       }),
 
       get("/instance_status", async (_, res) => {
