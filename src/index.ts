@@ -22,7 +22,7 @@ const secretAccessKey = process.env.AWS__SECRET_ACCESS_KEY;
 
 const sequelize = new Sequelize(process.env.POSTGRES_URL);
 sequelize.addModels([User]);
-sequelize.sync({});
+// sequelize.sync({});
 
 const twitterAuth = microAuthTwitter({
   consumerKey: process.env.TWITTER_CONSUMER_KEY,
@@ -257,9 +257,11 @@ const handler = cookieParse(async function(req, res) {
 
       get("/auth/twitter/callback", async (_, res) => {
         if (auth.err) {
-          await send(res, 500, { message: "err" });
+          await send(res, 500, { message: "err", error: auth.err });
           return;
         }
+        console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        console.log(auth);
         const u = await User.findOrCreateByAuth(auth);
         const token = jwt.sign({ id: u.id }, jwtSecret, {
           algorithm: "HS256",
@@ -287,4 +289,10 @@ const handler = cookieParse(async function(req, res) {
   })(req, res);
 });
 
-export = cors(handler);
+export = async function(req, res) {
+  try {
+    cors(handler)(req, res);
+  } catch (err) {
+    await send(res, 500, { message: "err", error: err });
+  }
+};
