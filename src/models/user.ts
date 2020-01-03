@@ -69,8 +69,11 @@ export class User extends Model<User> {
       auth.result.accessTokenSecret
     ];
     let u = await User.findOne({ where: { twitterUserId } });
-    const allowed = await new UserAllowed(u).allowed();
-    console.log({ allowed });
+    const allowed = await new UserAllowed(
+      twitterAccessToken,
+      twitterAccessTokenSecret,
+      twitterUserId
+    ).allowed();
     if (u) {
       u.update({
         name,

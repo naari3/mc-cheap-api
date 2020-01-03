@@ -260,8 +260,6 @@ const handler = cookieParse(async function(req, res) {
           await send(res, 500, { message: "err", error: auth.err });
           return;
         }
-        console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAA");
-        console.log(auth);
         const u = await User.findOrCreateByAuth(auth);
         const token = jwt.sign({ id: u.id }, jwtSecret, {
           algorithm: "HS256",
@@ -289,10 +287,11 @@ const handler = cookieParse(async function(req, res) {
   })(req, res);
 });
 
-export = async function(req, res) {
+export = async (req, res): Promise<void> => {
   try {
     cors(handler)(req, res);
   } catch (err) {
     await send(res, 500, { message: "err", error: err });
+    console.error(err);
   }
 };
