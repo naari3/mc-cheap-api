@@ -17,8 +17,8 @@ import * as AWS from "aws-sdk";
 
 const HOSTNAME = process.env.HOSTNAME;
 
-const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+const accessKeyId = process.env.AWS__ACCESS_KEY_ID;
+const secretAccessKey = process.env.AWS__SECRET_ACCESS_KEY;
 
 const sequelize = new Sequelize(process.env.POSTGRES_URL);
 sequelize.addModels([User]);
@@ -33,8 +33,8 @@ const twitterAuth = microAuthTwitter({
 
 const jwtSecret = process.env.JWT_SECRET;
 
-const region = process.env.AWS_REGION;
-const AutoScalingGroupName = process.env.AWS_AUTO_SCALING_GROUP_NAME;
+const region = process.env.AWS__REGION;
+const AutoScalingGroupName = process.env.AWS__AUTO_SCALING_GROUP_NAME;
 
 const creds = new AWS.Credentials(accessKeyId, secretAccessKey);
 AWS.config.credentials = creds;

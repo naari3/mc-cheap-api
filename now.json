@@ -1,0 +1,38 @@
+{
+  "version": 2,
+  "name": "mc-api",
+  "builds": [
+    {
+      "src": "build/**/*.js",
+      "use": "@now/node",
+      "config": {
+        "bundle": false
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/build/$1",
+      "headers": {
+        "Access-Control-Allow-Origin": "https://mc.naari3.now.sh",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Accept, Authorization"
+      }
+    }
+  ],
+  "env": {
+    "DOMAIN": "naari3.now.sh",
+    "HOSTNAME": "naari3.now.sh",
+    "RUNNING_URL": "https://mc-api.naari3.now.sh",
+    "WEB_HOST": "https://mc.naari3.now.sh",
+    "AWS__ACCESS_KEY_ID": "@aws_access_key_id",
+    "AWS__SECRET_ACCESS_KEY": "@aws_secret_access_key",
+    "AWS__REGION": "@aws_region",
+    "AWS__AUTO_SCALING_GROUP_NAME": "@aws_auto_scaling_group_name",
+    "TWITTER_CONSUMER_KEY": "@twitter_consumer_key",
+    "TWITTER_CONSUMER_SECRET_KEY": "@twitter_consumer_secret_key",
+    "POSTGRES_URL": "@postgres_url",
+    "JWT_SECRET": "@jwt_secret"
+  }
+}
