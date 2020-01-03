@@ -40,6 +40,7 @@ const creds = new AWS.Credentials(accessKeyId, secretAccessKey);
 AWS.config.credentials = creds;
 
 const autoscaling = new AWS.AutoScaling({ region });
+const ssm = new AWS.SSM({ region });
 
 const updateAutoScalingGroup = async (
   client: AWS.AutoScaling,
@@ -69,6 +70,35 @@ const describeAutoScalingGroup = async (
   });
 };
 
+const runCommand = async (
+  client: AWS.SSM,
+  instanceId: string,
+  command: string
+): Promise<AWS.SSM.SendCommandResult> => {
+  // aws ssm send-command --document-name "AWS-RunShellScript" --parameters '{"commands":["docker exec mc rcon-cli whitelist add naarisan"]}' --region ap-northeast-1 --instance-ids i-0516de45466169439
+  // --parameters '{"commands":["docker exec mc rcon-cli whitelist add naarisan"]}'
+  return new Promise((resolve, reject) => {
+    client.sendCommand(
+      {
+        DocumentName: "AWS-RunShellScript",
+        InstanceIds: [instanceId],
+        Parameters: {
+          commands: [command]
+        }
+      },
+      (err, data) => {
+        if (err !== null) {
+          reject(err);
+        } else {
+          resolve(data);
+        }
+      }
+    );
+  });
+};
+
+// const addWhitelist = async (username: string): Promise<>
+
 const currentUser = async (token: string): Promise<User> => {
   try {
     const { id } = jwt.verify(token, jwtSecret) as { id: string };
@@ -81,6 +111,17 @@ const currentUser = async (token: string): Promise<User> => {
 const currentUserAllowed = async (token: string): Promise<boolean> => {
   const user = await currentUser(token);
   return !!user && user.allowed;
+};
+
+const getInstance = async (): Promise<AWS.AutoScaling.Instance> => {
+  const AutoScalingGroupNames = [AutoScalingGroupName];
+  const result = await describeAutoScalingGroup(autoscaling, {
+    AutoScalingGroupNames
+  });
+  const group = result.AutoScalingGroups.find(
+    g => g.AutoScalingGroupName === AutoScalingGroupName
+  );
+  return group.Instances.find(i => i);
 };
 
 const handler = cookieParse(async function(req, res) {
@@ -130,7 +171,17 @@ const handler = cookieParse(async function(req, res) {
           }
         }
 
+        const instance = await getInstance();
+        if (!instance.InstanceId) {
+          await send(res, 403, { message: "forbidden" });
+          return;
+        }
+
         if (params.mcUsername && user.mcUsername !== params.mcUsername) {
+          const removeWhitelist = `docker exec mc rcon-cli whitelist remove ${user.mcUsername}`;
+          const addWhitelist = `docker exec mc rcon-cli whitelist add ${params.mcUsername}`;
+          await runCommand(ssm, instance.InstanceId, addWhitelist);
+          await runCommand(ssm, instance.InstanceId, removeWhitelist);
           user.update({ mcUsername: params.mcUsername });
         }
         await send(res, 200, { message: "ok", user });
@@ -142,21 +193,14 @@ const handler = cookieParse(async function(req, res) {
           return;
         }
 
-        const AutoScalingGroupNames = [AutoScalingGroupName];
-        const result = await describeAutoScalingGroup(autoscaling, {
-          AutoScalingGroupNames
-        });
-        const group = result.AutoScalingGroups.find(
-          g => g.AutoScalingGroupName === AutoScalingGroupName
-        );
-        const instance = group.Instances.find(i => i);
+        const instance = await getInstance();
 
         let status /* "Pending" | "InService" | "Terminating" | "Terminated" */ =
           "Terminated";
         if (instance) {
           status = instance.LifecycleState;
         }
-        await send(res, 200, { message: "ok", status, result });
+        await send(res, 200, { message: "ok", status, instance });
       }),
 
       post("/boot", async (_, res) => {
