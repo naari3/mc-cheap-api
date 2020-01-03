@@ -41,6 +41,7 @@ AWS.config.credentials = creds;
 
 const autoscaling = new AWS.AutoScaling({ region });
 const ssm = new AWS.SSM({ region });
+const ec2 = new AWS.EC2({ region });
 
 const updateAutoScalingGroup = async (
   client: AWS.AutoScaling,
@@ -85,6 +86,32 @@ const runCommand = async (
         Parameters: {
           commands: [command]
         }
+      },
+      (err, data) => {
+        if (err !== null) {
+          reject(err);
+        } else {
+          resolve(data);
+        }
+      }
+    );
+  });
+};
+
+const getTags = async (
+  client: AWS.EC2,
+  instanceId: string
+): Promise<AWS.EC2.DescribeTagsResult> => {
+  return new Promise((resolve, reject) => {
+    client.describeTags(
+      {
+        Filters: [
+          {
+            Name: "key",
+            Values: ["minecraft-status"]
+          },
+          { Name: "resource-id", Values: [instanceId] }
+        ]
       },
       (err, data) => {
         if (err !== null) {
@@ -199,10 +226,17 @@ const handler = cookieParse(async function(req, res) {
 
         const instance = await getInstance();
 
-        let status /* "Pending" | "InService" | "Terminating" | "Terminated" */ =
+        let status /* "InService" | "Launching" | "Pending" | "Terminating" | "Terminated" */ =
           "Terminated";
         if (instance) {
           status = instance.LifecycleState;
+        }
+        if (status === "InService") {
+          const tags = await getTags(ec2, instance.InstanceId);
+          const mcStatus = tags.Tags.find(t => t.Key === "minecraft-status");
+          if (mcStatus.Value === "starting") {
+            status = "Launching";
+          }
         }
         await send(res, 200, { message: "ok", status, instance });
       }),
