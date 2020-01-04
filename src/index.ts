@@ -151,6 +151,20 @@ const getInstance = async (): Promise<AWS.AutoScaling.Instance> => {
   return group.Instances.find(i => i);
 };
 
+const replaceErrors = (key, value) => {
+  if (value instanceof Error) {
+    const error = {};
+
+    Object.getOwnPropertyNames(value).forEach(function(key) {
+      error[key] = value[key];
+    });
+
+    return error;
+  }
+
+  return value;
+};
+
 const handler = cookieParse(async function(req, res) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   // const token = ((req as any).cookies || {}).token || "";
@@ -265,7 +279,10 @@ const handler = cookieParse(async function(req, res) {
 
       get("/auth/twitter/callback", async (_, res) => {
         if (auth.err) {
-          await send(res, 500, { message: "err", error: auth.err });
+          await send(res, 500, {
+            message: "autherr",
+            error: JSON.parse(JSON.stringify(auth.err, replaceErrors))
+          });
           return;
         }
         const u = await User.findOrCreateByAuth(auth);
@@ -299,7 +316,10 @@ export = async (req, res): Promise<void> => {
   try {
     cors(handler)(req, res);
   } catch (err) {
-    await send(res, 500, { message: "err", error: err });
-    console.error(err);
+    await send(res, 500, {
+      message: "err",
+      error: JSON.parse(JSON.stringify(auth.err, replaceErrors))
+    });
+    console.error({ err });
   }
 };
