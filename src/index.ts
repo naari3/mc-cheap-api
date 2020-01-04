@@ -211,7 +211,7 @@ const handler = cookieParse(async function(req, res) {
         if (instance.LifecycleState === "InService") {
           const tags = await getTags(ec2, instance.InstanceId);
           const mcStatus = tags.Tags.find(t => t.Key === "minecraft-status");
-          if (mcStatus || mcStatus.Value === "starting") {
+          if (mcStatus && mcStatus.Value === "starting") {
             await send(res, 403, { message: "forbidden" });
             return;
           }
@@ -242,7 +242,7 @@ const handler = cookieParse(async function(req, res) {
         if (status === "InService") {
           const tags = await getTags(ec2, instance.InstanceId);
           const mcStatus = tags.Tags.find(t => t.Key === "minecraft-status");
-          if (mcStatus || mcStatus.Value === "starting") {
+          if (mcStatus && mcStatus.Value === "starting") {
             status = "Launching";
           }
         }
