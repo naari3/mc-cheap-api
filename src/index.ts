@@ -208,13 +208,21 @@ const handler = cookieParse(async function(req, res) {
           return;
         }
 
-        if (params.mcUsername && user.mcUsername !== params.mcUsername) {
-          const removeWhitelist = `docker exec mc rcon-cli whitelist remove ${user.mcUsername}`;
-          const addWhitelist = `docker exec mc rcon-cli whitelist add ${params.mcUsername}`;
-          await runCommand(ssm, instance.InstanceId, removeWhitelist);
-          await runCommand(ssm, instance.InstanceId, addWhitelist);
-          user.update({ mcUsername: params.mcUsername });
+        if (instance.LifecycleState === "InService") {
+          const tags = await getTags(ec2, instance.InstanceId);
+          const mcStatus = tags.Tags.find(t => t.Key === "minecraft-status");
+          if (mcStatus || mcStatus.Value === "starting") {
+            await send(res, 403, { message: "forbidden" });
+            return;
+          }
         }
+
+        const removeWhitelist = `docker exec mc rcon-cli whitelist remove ${user.mcUsername}`;
+        const addWhitelist = `docker exec mc rcon-cli whitelist add ${params.mcUsername}`;
+        await runCommand(ssm, instance.InstanceId, removeWhitelist);
+        await runCommand(ssm, instance.InstanceId, addWhitelist);
+        user.update({ mcUsername: params.mcUsername });
+
         await send(res, 200, { message: "ok", user });
       }),
 
@@ -234,7 +242,7 @@ const handler = cookieParse(async function(req, res) {
         if (status === "InService") {
           const tags = await getTags(ec2, instance.InstanceId);
           const mcStatus = tags.Tags.find(t => t.Key === "minecraft-status");
-          if (mcStatus.Value === "starting") {
+          if (mcStatus || mcStatus.Value === "starting") {
             status = "Launching";
           }
         }
