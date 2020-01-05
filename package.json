@@ -20,7 +20,8 @@
   "scripts": {
     "start": "micro ./build/index.js",
     "dev": "node -r ts-node/register/transpile-only node_modules/.bin/micro-dev ./src/index.ts",
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "postinstall": "npm run build"
   },
   "devDependencies": {
     "@types/aws-sdk": "^2.7.0",
