@@ -318,7 +318,7 @@ export = async (req, res): Promise<void> => {
   } catch (err) {
     await send(res, 500, {
       message: "err",
-      error: JSON.parse(JSON.stringify(auth.err, replaceErrors))
+      error: JSON.parse(JSON.stringify(err, replaceErrors))
     });
     console.error({ err });
   }
