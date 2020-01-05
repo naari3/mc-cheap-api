@@ -317,7 +317,7 @@ export = async (req, res): Promise<void> => {
     cors(handler)(req, res);
   } catch (err) {
     await send(res, 500, {
-      message: "err",
+      message: "err plz retry",
       error: JSON.parse(JSON.stringify(err, replaceErrors))
     });
     console.error({ err });
