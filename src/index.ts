@@ -20,13 +20,9 @@ const HOSTNAME = process.env.HOSTNAME;
 const accessKeyId = process.env.AWS__ACCESS_KEY_ID;
 const secretAccessKey = process.env.AWS__SECRET_ACCESS_KEY;
 
-console.log("sequelize");
-
 const sequelize = new Sequelize(process.env.POSTGRES_URL);
 sequelize.addModels([User]);
 // sequelize.sync({});
-
-console.log("twauth");
 
 const twitterAuth = microAuthTwitter({
   consumerKey: process.env.TWITTER_CONSUMER_KEY,
@@ -39,8 +35,6 @@ const jwtSecret = process.env.JWT_SECRET;
 
 const region = process.env.AWS__REGION;
 const AutoScalingGroupName = process.env.AWS__AUTO_SCALING_GROUP_NAME;
-
-console.log("awscred");
 
 const creds = new AWS.Credentials(accessKeyId, secretAccessKey);
 AWS.config.credentials = creds;
@@ -170,8 +164,6 @@ const replaceErrors = (key, value) => {
 
   return value;
 };
-
-console.log("ready");
 
 const handler = cookieParse(async function(req, res) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -309,9 +301,15 @@ const handler = cookieParse(async function(req, res) {
         res.statusCode = 302;
         res.end();
       }),
-      get("/*", async (_, res) => {
+      get("/*", (async (_, res) => {
+        if (auth) {
+          await send(res, 500, {
+            message: "err plz retry",
+            error: JSON.parse(JSON.stringify(auth, replaceErrors))
+          });
+        }
         await send(res, 404, { message: "not found" });
-      }),
+      }) as (_: any, res: any) => Promise<void>),
       options("/*", async (req, res) => {
         res.end();
       })
