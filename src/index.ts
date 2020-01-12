@@ -310,6 +310,18 @@ const handler = cookieParse(async function(req, res) {
         }
         await send(res, 404, { message: "not found" });
       }) as (_: any, res: any) => Promise<void>),
+      post("/*", (async (_, res) => {
+        if (auth) {
+          await send(res, 500, {
+            message: "err plz retry",
+            error: JSON.parse(JSON.stringify(auth, replaceErrors))
+          });
+        }
+        await send(res, 404, { message: "not found" });
+      }) as (_: any, res: any) => Promise<void>),
+      options("/*", async (req, res) => {
+        res.end();
+      }),
       options("/*", async (req, res) => {
         res.end();
       })
