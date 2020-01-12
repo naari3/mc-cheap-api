@@ -332,12 +332,16 @@ const handler = cookieParse(async function(req, res) {
 
 export = async (req, res): Promise<void> => {
   try {
-    cors(handler)(req, res);
+    await cors(handler)(req, res).catch(async err => {
+      await send(res, 500, {
+        message: "err plz retry",
+        error: JSON.parse(JSON.stringify(err, replaceErrors))
+      });
+      console.error({ err });
+    });
   } catch (err) {
     await send(res, 500, {
-      message: "err plz retry",
-      error: JSON.parse(JSON.stringify(err, replaceErrors))
+      message: "err plz retry"
     });
-    console.error({ err });
   }
 };
