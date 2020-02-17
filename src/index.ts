@@ -128,12 +128,14 @@ const getTags = async (
 
 const currentUser = async (token: string): Promise<User> => {
   if (!token) {
+    console.error({ err: "token not found" });
     return null;
   }
   try {
     const { id } = jwt.verify(token, jwtSecret) as { id: string };
     return User.findByPk(id);
   } catch (error) {
+    console.error({ err: "errrr" });
     console.error({ error });
     return null;
   }
