@@ -127,10 +127,15 @@ const getTags = async (
 // const addWhitelist = async (username: string): Promise<>
 
 const currentUser = async (token: string): Promise<User> => {
+  console.log("a");
+  if (!token) {
+    return null;
+  }
   try {
     const { id } = jwt.verify(token, jwtSecret) as { id: string };
     return User.findByPk(id);
   } catch (error) {
+    console.error({ error });
     return null;
   }
 };
