@@ -127,7 +127,6 @@ const getTags = async (
 // const addWhitelist = async (username: string): Promise<>
 
 const currentUser = async (token: string): Promise<User> => {
-  console.log("a");
   if (!token) {
     return null;
   }
@@ -299,7 +298,8 @@ const handler = cookieParse(async function(req, res) {
           domain: HOSTNAME,
           httpOnly: true,
           maxAge: 60 * 60 * 24 * 30,
-          path: "/"
+          path: "/",
+          sameSite: "none"
         });
         res.setHeader("Set-Cookie", setCookie);
         res.setHeader("Location", process.env.WEB_HOST);
