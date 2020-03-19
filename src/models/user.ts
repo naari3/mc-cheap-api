@@ -13,8 +13,8 @@ import * as uuid from "uuid/v4";
 
 import { UserAllowed } from "../services/userAllowed";
 
-import * as pg from "pg";
-pg.defaults.parseInt8 = true;
+// import * as pg from "pg";
+// pg.defaults.parseInt8 = true;
 
 @Table({ timestamps: true })
 export class User extends Model<User> {
@@ -64,7 +64,7 @@ export class User extends Model<User> {
     ] = [
       auth.result.info.name,
       auth.result.info.screen_name,
-      auth.result.info.id,
+      auth.result.info.id_str,
       auth.result.accessToken,
       auth.result.accessTokenSecret
     ];

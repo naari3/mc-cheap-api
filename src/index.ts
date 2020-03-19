@@ -14,6 +14,7 @@ import * as cookie from "cookie";
 import * as cookieParse from "micro-cookie";
 
 import * as AWS from "aws-sdk";
+import { UserAllowed } from "./services/userAllowed";
 
 const HOSTNAME = process.env.HOSTNAME;
 
@@ -301,8 +302,7 @@ const handler = cookieParse(async function(req, res) {
           httpOnly: true,
           maxAge: 60 * 60 * 24 * 30,
           path: "/",
-          sameSite: "none",
-          secure: true
+          sameSite: "lax"
         });
         res.setHeader("Set-Cookie", setCookie);
         res.setHeader("Location", process.env.WEB_HOST);

@@ -3,12 +3,12 @@ import * as Twitter from "twitter";
 
 export class UserAllowed {
   user: User;
-  twitterUserId: number;
+  twitterUserId: string;
   twitter: Twitter;
   constructor(
     accessTokenKey: string,
     accessTokenSecret: string,
-    twitterUserId: number
+    twitterUserId: string
   ) {
     this.twitterUserId = twitterUserId;
     /* eslint-disable @typescript-eslint/camelcase */
@@ -28,12 +28,14 @@ export class UserAllowed {
     /* eslint-disable @typescript-eslint/camelcase */
     const { ids } = (await this.twitter.get("friends/ids", {
       screen_name: "_naari_",
-      count: 5000
-    })) as { ids: Array<number> };
+      count: 5000,
+      stringify_ids: true
+    })) as { ids: Array<string> };
     /* eslint-enable @typescript-eslint/camelcase */
+    console.log(this.twitterUserId);
     return (
       ids.includes(this.twitterUserId) ||
-      this.twitterUserId === 822483434173911000
+      this.twitterUserId === "822483434173911041"
     );
   }
 }
