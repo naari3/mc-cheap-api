@@ -14,7 +14,6 @@ import * as cookie from "cookie";
 import * as cookieParse from "micro-cookie";
 
 import * as AWS from "aws-sdk";
-import { UserAllowed } from "./services/userAllowed";
 
 const HOSTNAME = process.env.HOSTNAME;
 

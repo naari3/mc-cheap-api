@@ -36,7 +36,7 @@ export class User extends Model<User> {
   @AllowNull(false)
   @Unique
   @Column(DataType.BIGINT)
-  twitterUserId: number;
+  twitterUserId: string;
 
   @Column
   twitterAccessToken: string;
