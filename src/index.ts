@@ -301,7 +301,8 @@ const handler = cookieParse(async function(req, res) {
           httpOnly: true,
           maxAge: 60 * 60 * 24 * 30,
           path: "/",
-          sameSite: "none"
+          sameSite: "none",
+          secure: true
         });
         res.setHeader("Set-Cookie", setCookie);
         res.setHeader("Location", process.env.WEB_HOST);
