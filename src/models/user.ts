@@ -83,6 +83,14 @@ export class User extends Model<User> {
         allowed
       });
     } else {
+      console.log({
+        name,
+        twitterScreenName,
+        twitterUserId,
+        twitterAccessToken,
+        twitterAccessTokenSecret,
+        allowed
+      });
       u = await User.create({
         name,
         twitterScreenName,
